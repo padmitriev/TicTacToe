@@ -1,0 +1,483 @@
+
+import java.util.*;
+
+public class Main {
+
+    private static String[][] base = new  String[3][3];
+    private static int coord1;
+    private static int coord2;
+    private static int[] coords = new int[2];
+    private static String xo = "X";
+    private static String[] users = new  String[2];
+    private static int[] mediumPair = new int[2];
+    private static ArrayList<int[]> arrayForRec = new ArrayList<>();
+    private static String win;
+    private static String loose;
+    private static boolean toExit = false;
+
+    public static void main(String[] args) {
+
+        while (!toExit) {
+            cleanBase();
+            scanStart();
+            gameMethod();
+        }
+    }
+
+    private static void cleanBase() {
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                base[i][j] = " ";
+            }
+        }
+    }
+
+    private static void paintField() {
+
+        System.out.println("---------");
+
+        for (int i = 0; i < base.length; i++) {
+            System.out.print("|" + " ");
+            for (int j = 0; j < base[i].length; j++) {
+                System.out.print(base[i][j] + " ");
+            }
+            System.out.print("|");
+            System.out.println();
+        }
+
+        System.out.println("---------");
+    }
+
+    private static void gameMethod() {
+
+        String changedUser = users[1];
+
+        while (true) {
+            if ((getEmptySlots().size() > 0) && showGameResult().equals("Game not finished")) {
+                changedUser = changeUser(changedUser);
+                playerMove(gameMode(changedUser));
+            } else {
+                System.out.println(showGameResult());
+                break;
+            }
+        }
+    }
+
+    private static String changeUser(String user) {
+
+        if (user.equals(users[0])) {
+            return users[1];
+        }
+        if (user.equals(users[1])) {
+            return users[0];
+        }
+        return "";
+    }
+
+    private static int[] gameMode(String user) {
+
+        if (user.equals("easy")) {
+            return easyMove(0);
+        }
+        if (user.equals("user")) {
+            return humanMove();
+        }
+        if (user.equals("medium")) {
+            return mediumMove();
+        }
+        if (user.equals("hard")) {
+            return hardMove();
+        }
+
+        return coords;
+    }
+
+    private static void playerMove(int[] pair) {
+
+        base[pair[0]][pair[1]] = xo;
+        paintField();
+        xo = notXO(xo);
+    }
+
+    private static int[] easyMove(int mode) {
+
+        if (mode == 0) {
+            System.out.println("Making move level \"easy\"");
+        }
+
+        ArrayList<int[]> emptySlotsArray1 = getEmptySlots();
+
+        Random random = new Random();
+        int rand = random.nextInt(emptySlotsArray1.size());
+
+        int[] newPair = emptySlotsArray1.get(rand);
+
+        return newPair;
+    }
+
+    private static int[] mediumMove() {
+
+        System.out.println("Making move level \"medium\"");
+
+        if (getEmptySlots().size() == 9) {
+            int[] ttemp = new int[]{2, 0};
+            return ttemp;
+        }
+
+        if (tryMoves(xo)) {
+            return mediumPair;
+        } else if (tryMoves(notXO(xo))) {
+            return mediumPair;
+        } else {
+            return easyMove(1);
+        }
+    }
+
+    private static boolean tryMoves(String tempXO) {
+
+        String win = tempXO.concat(" wins");
+        ArrayList<int[]> emptySlotsArray = getEmptySlots();
+
+        for (int[] pair:emptySlotsArray) {
+            base[pair[0]][pair[1]] = tempXO;
+            if (showGameResult().equals(win)) {
+                base[pair[0]][pair[1]] = " ";
+                mediumPair = pair;
+                return true;
+            } else {
+                base[pair[0]][pair[1]] = " ";
+            }
+        }
+        return false;
+    }
+
+    private static int[] humanMove() {
+
+        scan();
+
+        int[] pair = coords;
+
+        return pair;
+    }
+
+    private static int[] hardMove() {
+
+        int[] kostyl = new int[]{1, 1};
+
+        if (getEmptySlots().size() == 9) {
+            return kostyl;
+        }
+
+        win = xo.concat(" wins");
+        loose = notXO(xo).concat(" wins");
+
+        System.out.println("Making move level \"hard\"");
+
+        rec(xo);
+
+        return minimax();
+    }
+
+    private static int[] minimax() {
+
+        int level = getEmptySlots().size();
+        boolean even;
+
+        if ((level % 2) == 0) {
+            even = false;
+        } else {
+            even = true;
+        }
+
+        for (int i = 1; i < level; i++) {
+            maxORmin(even, i);
+            even = !even;
+        }
+
+        ArrayList<Integer> lastPrices = new ArrayList<>();
+
+        for (int[] finMax : arrayForRec) {
+            lastPrices.add(finMax[3]);
+        }
+
+        Collections.sort(lastPrices);
+        int lastMax = lastPrices.get(lastPrices.size() - 1);
+        int[] minmaxPair = new int[2];
+
+        for (int i = 0; i < arrayForRec.size(); i++) {
+            if (arrayForRec.get(i)[3] == lastMax) {
+                minmaxPair[0] = arrayForRec.get(i)[1];
+                minmaxPair[1] = arrayForRec.get(i)[2];
+                break;
+            }
+        }
+
+        arrayForRec.clear();
+
+        return minmaxPair;
+    }
+
+    private static void maxORmin(boolean even, int level) {
+
+        if (even) {
+            maximize(level);
+        } else {
+            minimize(level);
+        }
+    }
+
+    private static void maximize(int min) {
+
+        int mmmin = -10000;
+        ArrayList<int[]> tempArr = new ArrayList<>();
+        for (int i = 0; i < arrayForRec.size(); i++) {
+            if (arrayForRec.get(i)[0] == min) {
+                tempArr.add(arrayForRec.get(i));
+                if (arrayForRec.get(i)[3] > mmmin) {
+                    mmmin = arrayForRec.get(i)[3];
+                }
+                arrayForRec.remove(i);
+                i--;
+            }
+            if (!tempArr.isEmpty()) {
+                arrayForRec.get(i)[3] = mmmin;
+                tempArr.clear();
+                mmmin = -10000;
+            }
+        }
+    }
+
+    private static void minimize(int min) {
+
+        int mmmax = 10000;
+        ArrayList<int[]> tempArr = new ArrayList<>();
+        for (int i = 0; i < arrayForRec.size(); i++) {
+            if (arrayForRec.get(i)[0] == min) {
+                tempArr.add(arrayForRec.get(i));
+                if (arrayForRec.get(i)[3] < mmmax) {
+                    mmmax = arrayForRec.get(i)[3];
+                }
+                arrayForRec.remove(i);
+                i--;
+            }
+            if (!tempArr.isEmpty()) {
+                arrayForRec.get(i)[3] = mmmax;
+                tempArr.clear();
+                mmmax = 10000;
+            }
+        }
+    }
+
+    private static void rec(String xo) {
+
+        int price = 0;
+        ArrayList<int[]> emptySlots = getEmptySlots();
+
+        for (int i = 0; i < emptySlots.size(); i++) {
+            price = 0;
+            base[emptySlots.get(i)[0]][emptySlots.get(i)[1]] = xo;
+            if (showGameResult().equals(win)) {
+                price = 10;
+            }
+            if (showGameResult().equals("Draw")) {
+                price = 0;
+            }
+            if (showGameResult().equals(loose)) {
+                price = -10;
+            }
+            int[] variant0 = new int[]{emptySlots.size(),
+                    emptySlots.get(i)[0], emptySlots.get(i)[1],
+                    price};
+            arrayForRec.add(variant0);
+            if (showGameResult().equals("Game not finished")) {
+                rec(notXO(xo));
+            }
+            base[emptySlots.get(i)[0]][emptySlots.get(i)[1]] = " ";
+        }
+    }
+
+    private static void scanStart() {
+
+        String inputStart = "";
+
+        System.out.print("Input command: ");
+
+        Scanner in = new Scanner(System.in);
+        if (in.hasNextLine()) {
+            inputStart = in.nextLine();
+        }
+
+        if (inputStart.equals("exit")) {
+            toExit = true;
+            System.exit(0);
+        }
+
+        if (!testStart(inputStart)) {
+            System.out.println("Bad parameters!");
+            scanStart();
+//        } else {
+//            gameChoice = inputStart;
+        }
+    }
+
+    private static boolean testStart(String inputStart) {
+
+        int countOK = 0;
+
+        String[] startTokens = new String[3];
+        int k = 0;
+        ArrayList<String> words = new ArrayList<>(List.of("easy", "medium", "hard", "user"));
+
+        for (int i=0; i < startTokens.length; i++) {
+            startTokens[i] = "";
+        }
+
+        StringTokenizer st = new StringTokenizer(inputStart, " ");
+        while (st.hasMoreTokens() && (k < 3)) {
+            startTokens[k] = st.nextToken();
+            k++;
+        }
+
+        for (int i=0; i < words.size(); i++) {
+            if (startTokens[1].equals(words.get(i))) {
+                countOK++;
+            }
+            if (startTokens[2].equals(words.get(i))) {
+                countOK++;
+            }
+        }
+
+        if (startTokens[0].equals("start") && (countOK == 2)) {
+            users[0] = startTokens[1];
+            users[1] = startTokens[2];
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private static void scan() {
+
+        String input = null;
+
+        System.out.print("Enter the coordinates: ");
+
+        Scanner in = new Scanner(System.in);
+        if (in.hasNextLine()) {
+            input = in.nextLine();
+        }
+
+        assert input != null;
+        if (!scanTest(input)) {
+            scan();
+        }
+    }
+
+    private static boolean scanTest(String input) {
+
+        if (!input.matches("[0-9]+\\s+[0-9]+")) {
+            System.out.println("You should enter numbers!");
+            return false;
+        } else {
+            coord1 = Character.getNumericValue(input.charAt(0));
+            coord2 = Character.getNumericValue(input.charAt(2));
+            toTrueCoord(coord1, coord2);
+
+            if (coord1<1 || coord1>3 || coord2<1 || coord2>3) {
+                System.out.println("Coordinates should be from 1 to 3!");
+                return false;
+            } else if (!base[coords[0]][coords[1]].equals(" ")) {
+                System.out.println("This cell is occupied! Choose another one!");
+                return false;
+            } else {
+                return true;
+            }
+        }
+    }
+
+    private static void toTrueCoord(int coord1, int coord2) {
+
+        coords[0] = 3 - coord2;
+        coords[1] = coord1 - 1;
+    }
+
+    private static ArrayList<int[]> getEmptySlots() {
+
+        ArrayList<int[]> emptySlotsArray = new ArrayList<>();
+
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (base[i][j].equals(" ")) {
+                    int[] emptyPair = new int[]{i, j};
+                    emptySlotsArray.add(emptyPair);
+                }
+            }
+        }
+
+        return emptySlotsArray;
+    }
+
+
+    private static String notXO (String xo) {
+
+        return xo.equals("X") ? "O" : "X";
+    }
+
+    private static String showGameResult () {
+
+        boolean xWins = false;
+        boolean oWins = false;
+
+        String x = "X";
+        String o = "O";
+        String result = "Game not finished";
+
+        //проверка выигрыша по рядам
+        for (int i = 0; i < base[0].length; i++) {
+            if (base[i][0].equals(base[i][1]) & base[i][0].equals(base[i][2])) {
+                if (base[i][0].equals(x)) {
+                    xWins = true;
+                } else if (base[i][0].equals(o)) {
+                    oWins = true;
+                }
+            }
+        }
+        //проверка выигрыша по столбцам
+        for(int i=0; i<base.length; i++){
+            if (base[0][i].equals(base[1][i]) & base[0][i].equals(base[2][i])){
+                if (base[0][i].equals(x)){
+                    xWins = true;
+                } else if (base[0][i].equals(o)){
+                    oWins = true;
+                }
+            }
+        }
+
+        //проверка диагонали слева направо
+        if (base[0][0].equals(base[1][1]) & base[0][0].equals(base[2][2])){
+            if (base[0][0].equals(x)){
+                xWins = true;
+            } else if (base[0][0].equals(o)){
+                oWins = true;
+            }
+        }
+        //проверка диагонали справа налево
+        if (base[0][2].equals(base[1][1]) & base[0][2].equals(base[2][0])){
+            if (base[0][2].equals(x)){
+                xWins = true;
+            } else if (base[0][2].equals(o)){
+                oWins = true;
+            }
+        }
+
+        if (getEmptySlots().size() == 0){
+            if (!xWins & !oWins) {
+                result = "Draw";
+            }
+        }
+        if (xWins) result = "X wins";
+        if (oWins) result = "O wins";
+
+        return result;
+    }
+}
